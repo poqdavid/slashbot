@@ -1,0 +1,9 @@
+version: 1._{build}
+configuration: Release
+platform: x64
+before_build:
+- cmd: nuget restore
+build:
+  project: SlashBot.sln
+  verbosity: minimal
+image: Visual Studio 2022
