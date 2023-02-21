@@ -80,6 +80,10 @@ internal class Program
     public Program()
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
+        Config.Discord.Token = Environment.GetEnvironmentVariable("Discord_Token") ?? Config.Discord.Token;
+        Config.Discord.CommandPrefix = Environment.GetEnvironmentVariable("Discord_CommandPrefix") ?? Config.Discord.CommandPrefix;
+
+        Config.SaveSetting();
     }
 
     public async Task RunBotAsync()

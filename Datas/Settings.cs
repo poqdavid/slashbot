@@ -18,7 +18,8 @@
 
 namespace SlashBot.Datas;
 
-public struct Settings
+#nullable disable
+public class Settings
 {
     private Discord defaultDiscord = new();
 
@@ -40,7 +41,7 @@ public struct Settings
     /// <summary>
     /// Saves the App settings in selected path.
     /// </summary>
-    public static void SaveSetting()
+    public void SaveSetting()
     {
         if (!Directory.Exists(Program.CurrentDir))
         {
@@ -60,7 +61,7 @@ public struct Settings
         try
         {
             string json_string = File.ReadAllText(Program.SettingPath);
-            if (Json.IsValid(json_string))
+            if (json_string is not null && Json.IsValid(json_string))
             {
                 JsonSerializerOptions options = new()
                 {
@@ -83,7 +84,7 @@ public struct Settings
     }
 }
 
-public struct Discord
+public class Discord
 {
     private string defaultToken = "<token>";
     private string defaultCommandPrefix = "!";

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SlashBot": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
