@@ -32,4 +32,11 @@ public class BotSlashCommands : ApplicationCommandModule
         }
         catch (Exception ex) { await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"An exception occured: `{ex.GetType()}: {ex.Message}`")); }
     }
+
+    [SlashCommand("ping", "Replies with Pong and Discord Websocket latency for Client to your ping")]
+    public async Task Ping(InteractionContext context) => await context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new()
+    {
+        Content = $"Pong! Discord Websocket latency for Client is {context.Client.Ping}ms.",
+        IsEphemeral = true
+    });
 }

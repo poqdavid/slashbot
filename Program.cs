@@ -33,7 +33,6 @@ internal class Program
     public readonly EventId BotEventId = new(42, "SlashBot");
 
     public static DiscordClient? Client { get; set; }
-    public CommandsNextExtension Commands { get; set; }
 
     public static DiscordChannel? lastdiscordChannel = null;
 
@@ -81,7 +80,6 @@ internal class Program
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
         Config.Discord.Token = Environment.GetEnvironmentVariable("Discord_Token") ?? Config.Discord.Token;
-        Config.Discord.CommandPrefix = Environment.GetEnvironmentVariable("Discord_CommandPrefix") ?? Config.Discord.CommandPrefix;
 
         Config.SaveSetting();
     }
@@ -96,7 +94,9 @@ internal class Program
             TokenType = TokenType.Bot,
 
             AutoReconnect = true,
-            LoggerFactory = logFactory
+            LoggerFactory = logFactory,
+
+            Intents = DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents
         };
 
         Client = new DiscordClient(cfg);
@@ -105,26 +105,12 @@ internal class Program
         Client.GuildAvailable += this.Client_GuildAvailable;
         Client.ClientErrored += this.Client_ClientError;
 
-        var ccfg = new CommandsNextConfiguration
-        {
-            StringPrefixes = new[] { Config.Discord.CommandPrefix },
-
-            EnableDms = false,
-
-            EnableMentionPrefix = true
-        };
-
         var slash = Client.UseSlashCommands();
-        this.Commands = Client.UseCommandsNext(ccfg);
-
-        this.Commands.CommandExecuted += this.Commands_CommandExecuted;
-        this.Commands.CommandErrored += this.Commands_CommandErrored;
 
         slash.SlashCommandExecuted += Slash_SlashCommandExecuted;
         slash.SlashCommandErrored += Slash_SlashCommandErrored;
         slash.SlashCommandInvoked += Slash_SlashCommandInvoked;
 
-        this.Commands.RegisterCommands<BotCommands>();
         slash.RegisterCommands<BotSlashCommands>();
 
         await Client.ConnectAsync();
@@ -197,32 +183,5 @@ internal class Program
         sender.Logger.LogError(BotEventId, e.Exception, "Exception occured");
 
         return Task.CompletedTask;
-    }
-
-    private Task Commands_CommandExecuted(CommandsNextExtension sender, CommandExecutionEventArgs e)
-    {
-        e.Context.Client.Logger.LogInformation(BotEventId, "{Username} successfully executed '{QualifiedName}'", e.Context.User.Username, e.Command.QualifiedName);
-
-        return Task.CompletedTask;
-    }
-
-    private async Task Commands_CommandErrored(CommandsNextExtension sender, CommandErrorEventArgs e)
-    {
-        Thread.CurrentThread.Name = "MainThread";
-
-        e.Context.Client.Logger.LogError(BotEventId, "{Username} tried executing '{QualifiedName}' but it errored: {Type}: {Message}", e.Context.User.Username, e.Command?.QualifiedName ?? "<unknown command>", e.Exception.GetType(), e.Exception.Message ?? "<no message>");
-
-        if (e.Exception is ChecksFailedException)
-        {
-            var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
-
-            var embed = new DiscordEmbedBuilder
-            {
-                Title = "Access denied",
-                Description = $"{emoji} You do not have the permissions required to execute this command.",
-                Color = new DiscordColor(0xFF0000)
-            };
-            await e.Context.RespondAsync(embed);
-        }
     }
 }

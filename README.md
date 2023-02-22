@@ -14,5 +14,4 @@ services:
       dockerfile: ./Dockerfile
     environment: 
       - Discord_Token=<token>
-      - Discord_CommandPrefix=!
 ```
