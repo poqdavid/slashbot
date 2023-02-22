@@ -17,7 +17,6 @@
  */
 
 global using DSharpPlus;
-global using DSharpPlus.CommandsNext;
 global using DSharpPlus.CommandsNext.Attributes;
 global using DSharpPlus.CommandsNext.Exceptions;
 global using DSharpPlus.Entities;
@@ -33,6 +32,7 @@ global using SlashBot.Utils;
 global using System;
 global using System.ComponentModel;
 global using System.IO;
+global using System.Text.Encodings.Web;
 global using System.Text.Json;
 global using System.Text.Json.Nodes;
 global using System.Text.Json.Serialization;

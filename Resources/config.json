@@ -1,0 +1,7 @@
+{
+  "discord": {
+    "token": "<token>",
+    "defaultactivity": "Commands...",
+    "defaultactivitytype": "ListeningTo"
+  }
+}

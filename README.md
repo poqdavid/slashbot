@@ -14,4 +14,6 @@ services:
       dockerfile: ./Dockerfile
     environment: 
       - Discord_Token=<token>
+      - Discord_DefaultActivity=Commands...
+      = Discord_DefaultActivityType=ListeningTo
 ```
