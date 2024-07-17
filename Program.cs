@@ -20,23 +20,21 @@ namespace SlashBot;
 
 internal class Program
 {
-    private static Logger? logger;
+    //private static Logger? logger;
 
-    public static Logger Logger
-    { get { return logger ?? throw new Exception("Logger Is Null"); } set => logger = value; }
+    //public static Logger Logger
+    //{ get { return logger ?? throw new Exception("Logger Is Null"); } set => logger = value; }
 
     public static string CurrentDir { get => Environment.CurrentDirectory; }
     public static string SettingPath { get; set; } = Path.Combine(CurrentDir, "config.json");
 
     public static Settings Config { get; set; } = new();
 
-    public readonly EventId BotEventId = new(42, "SlashBot");
-
-    public static DiscordClient? Client { get; set; }
+    public static readonly EventId BotEventId = new(42, "SlashBot");
 
     public static DiscordChannel? lastdiscordChannel = null;
 
-    public static string[] TableFlips = new string[] {
+    public static string[] TableFlips = [
         "┳━┳ ヽ(ಠل͜ಠ)ﾉ",
         "┬─┬ノ( º _ ºノ)",
         "(˚Õ˚)ر ~~~~╚╩╩╝",
@@ -46,9 +44,9 @@ internal class Program
         "(┛◉Д◉)┛彡┻━┻",
         "(☞ﾟヮﾟ)☞ ┻━┻",
         "(┛ಠ_ಠ)┛彡┻━┻"
-        };
+        ];
 
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Thread.CurrentThread.Name = "MainThread";
 
@@ -57,7 +55,7 @@ internal class Program
             .AddJsonFile(path: "appsettings.json", optional: false, reloadOnChange: true)
             .Build();
 
-        logger = new LoggerConfiguration()
+        Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .CreateLogger();
 
@@ -65,145 +63,45 @@ internal class Program
         {
             Config.LoadSettings();
         }
-        catch (Exception ex) { Logger.Error(ex, "Error loading {SettingPath}", SettingPath); }
-        finally { logger.Information("Settings loaded"); }
+        catch (Exception ex) { Log.Logger.Error(ex, "Error loading {SettingPath}", SettingPath); }
+        finally { Log.Logger.Information("Settings loaded"); }
 
-        var prog = new Program();
-
-        try { prog.RunBotAsync().GetAwaiter().GetResult(); }
-        catch (Exception ex) { Logger.Error(ex, ex.Message); }
-    }
-
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
-    public Program()
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    {
         Config.Discord.Token = Environment.GetEnvironmentVariable("Discord_Token") ?? Config.Discord.Token;
         Config.Discord.DefaultActivity = Environment.GetEnvironmentVariable("Discord_DefaultActivity") ?? Config.Discord.DefaultActivity;
 
-        if (Enum.TryParse<ActivityType>(Environment.GetEnvironmentVariable("Discord_DefaultActivityType"), out ActivityType at))
+        if (Enum.TryParse<DiscordActivityType>(Environment.GetEnvironmentVariable("Discord_DefaultActivityType"), out DiscordActivityType at))
         {
             Config.Discord.DefaultActivityType = at;
         }
         else
         {
-            Config.Discord.DefaultActivityType = ActivityType.ListeningTo;
+            Config.Discord.DefaultActivityType = DiscordActivityType.ListeningTo;
         }
 
         Config.SaveSetting();
-    }
 
-    public async Task RunBotAsync()
-    {
-        ILoggerFactory logFactory = new LoggerFactory().AddSerilog(logger);
+        var host = Host.CreateDefaultBuilder(args)
+         .ConfigureAppConfiguration((context, config) =>
+         {
+             config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+         })
+         .ConfigureServices((context, services) =>
+         {
+             //services.AddSingleton<CommandsExtension>();
+             services.AddDiscordClient(Config.Discord.Token, DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents);
+             services.AddSingleton<SlashBotHostedService>();
+             services.AddHostedService(s => s.GetRequiredService<SlashBotHostedService>());
+             //services.AddHostedService<SlashBotHostedService>();
+         })
+         .ConfigureLogging(logging =>
+         {
+             logging.ClearProviders();
+             logging.AddConsole();
+         })
+         .Build();
 
-        var cfg = new DiscordConfiguration
-        {
-            Token = Config.Discord.Token,
-            TokenType = TokenType.Bot,
+        await host.RunAsync();
 
-            AutoReconnect = true,
-            LoggerFactory = logFactory,
-
-            Intents = DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents
-        };
-
-        Client = new DiscordClient(cfg);
-
-        Client.Ready += this.Client_Ready;
-        Client.GuildAvailable += this.Client_GuildAvailable;
-        Client.ClientErrored += this.Client_ClientError;
-
-        var slash = Client.UseSlashCommands();
-
-        slash.SlashCommandExecuted += Slash_SlashCommandExecuted;
-        slash.SlashCommandErrored += Slash_SlashCommandErrored;
-        slash.SlashCommandInvoked += Slash_SlashCommandInvoked;
-
-        slash.RegisterCommands<BotSlashCommands>();
-
-        await Client.ConnectAsync();
-
-        await Task.Delay(-1);
-    }
-
-    private async Task Slash_SlashCommandInvoked(SlashCommandsExtension sender, DSharpPlus.SlashCommands.EventArgs.SlashCommandInvokedEventArgs e)
-    {
-        e.Context.Client.Logger.LogInformation(BotEventId, "{Username} successfully invoked '{CommandName}'", e.Context.User.Username, e.Context.CommandName);
-
-        await e.Context.Client.UpdateStatusAsync(new DiscordActivity()
-        {
-            ActivityType = ActivityType.Playing,
-            Name = "Running commands..."
-        }, UserStatus.Idle);
-    }
-
-#nullable disable
-
-    private async Task Slash_SlashCommandErrored(SlashCommandsExtension sender, DSharpPlus.SlashCommands.EventArgs.SlashCommandErrorEventArgs e)
-    {
-        e.Context.Client.Logger.LogError(BotEventId, "{Username} tried executing '{CommandName}' but it errored: {Type}: {Message}", e.Context.User.Username, e.Context?.CommandName ?? "<unknown command>", e.Exception.GetType(), e.Exception.Message ?? "<no message>");
-
-        if (e.Exception is ChecksFailedException)
-        {
-            var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
-
-            var embed = new DiscordEmbedBuilder
-            {
-                Title = "Access denied",
-                Description = $"{emoji} You do not have the permissions required to execute this command.",
-                Color = new DiscordColor(0xFF0000)
-            };
-            await e.Context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"{embed}"));
-        }
-
-        await e.Context.Client.UpdateStatusAsync(new DiscordActivity()
-        {
-            ActivityType = ActivityType.Watching,
-            Name = "Errors!"
-        }, UserStatus.DoNotDisturb);
-    }
-
-#nullable enable
-
-    private async Task Slash_SlashCommandExecuted(SlashCommandsExtension sender, DSharpPlus.SlashCommands.EventArgs.SlashCommandExecutedEventArgs e)
-    {
-        e.Context.Client.Logger.LogInformation(BotEventId, "{Username} successfully executed '{CommandName}'", e.Context.User.Username, e.Context.CommandName);
-
-        await e.Context.Client.UpdateStatusAsync(new DiscordActivity()
-        {
-            ActivityType = Config.Discord.DefaultActivityType,
-            Name = Config.Discord.DefaultActivity
-        }, UserStatus.Online);
-    }
-
-    private async Task Client_Ready(DiscordClient sender, ReadyEventArgs e)
-    {
-        sender.Logger.LogInformation(BotEventId, "Client is ready to process events.");
-
-        await sender.UpdateStatusAsync(new DiscordActivity()
-        {
-            ActivityType = Config.Discord.DefaultActivityType,
-            Name = Config.Discord.DefaultActivity
-        }, UserStatus.Online);
-    }
-
-    private Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
-    {
-        Thread.CurrentThread.Name = "MainThread";
-
-        sender.Logger.LogInformation(BotEventId, "Guild available: {GuildName}", e.Guild.Name);
-
-        return Task.CompletedTask;
-    }
-
-    private Task Client_ClientError(DiscordClient sender, ClientErrorEventArgs e)
-    {
-        Thread.CurrentThread.Name = "MainThread";
-
-        sender.Logger.LogError(BotEventId, e.Exception, "Exception occured");
-
-        return Task.CompletedTask;
+        await Log.CloseAndFlushAsync();
     }
 }

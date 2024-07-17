@@ -96,7 +96,7 @@ public class Discord
 {
     private string defaultToken = "<token>";
     private string defaultDefaultActivity = "Commands...";
-    private ActivityType defaultActivityType = ActivityType.ListeningTo;
+    private DiscordActivityType defaultActivityType = DiscordActivityType.ListeningTo;
 
     public Discord()
     {
@@ -133,8 +133,8 @@ public class Discord
     }
 
     [JsonPropertyName("defaultactivitytype")]
-    [DefaultValue(ActivityType.ListeningTo)]
-    public ActivityType DefaultActivityType
+    [DefaultValue(DiscordActivityType.ListeningTo)]
+    public DiscordActivityType DefaultActivityType
     {
         get => defaultActivityType;
         set

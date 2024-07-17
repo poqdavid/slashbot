@@ -18,25 +18,42 @@
 
 namespace SlashBot.Commands;
 
-public class BotSlashCommands : ApplicationCommandModule
+public class BotCommands
 {
-    [SlashCommand("table_flip", "Post a table flip")]
+    [Command("table_flip"), Description("Post a table flip")]
     [RequireGuild()]
-    [RequireUserPermissions(Permissions.SendMessages)]
-    public async Task TableFlip(InteractionContext ctx)
+    [RequirePermissions(DiscordPermissions.SendMessages)]
+    public static async Task TableFlip(CommandContext ctx)
     {
         try
         {
             string flip = Program.TableFlips[new Random().Next(Program.TableFlips.Length)];
-            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent(flip));
+            await ctx.RespondAsync(new DiscordInteractionResponseBuilder().WithContent(flip));
         }
-        catch (Exception ex) { await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent($"An exception occured: `{ex.GetType()}: {ex.Message}`")); }
+        catch (Exception ex)
+        {
+            await ctx.RespondAsync(new DiscordInteractionResponseBuilder().WithContent($"An exception occured: `{ex.GetType()}: {ex.Message}`"));
+        }
     }
 
-    [SlashCommand("ping", "Replies with Pong and Discord Websocket latency for Client to your ping")]
-    public async Task Ping(InteractionContext context) => await context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new()
+    [Command("ping")]
+    [Description("Replies with Pong and Discord Websocket latency for Client to your ping")]
+    public static async Task Ping(CommandContext context) => await context.RespondAsync(new DiscordInteractionResponseBuilder()
     {
         Content = $"Pong! Discord Websocket latency for Client is {context.Client.Ping}ms.",
         IsEphemeral = true
     });
+
+    [Command("test")]
+    [Description("Testing 1234")]
+    public static async Task Test(CommandContext context)
+    {
+        Console.WriteLine("Test command ran");
+
+        await context.RespondAsync(new DiscordInteractionResponseBuilder()
+        {
+            Content = "Hello, world!",
+            IsEphemeral = true
+        });
+    }
 }
