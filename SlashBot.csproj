@@ -24,6 +24,7 @@
 		<DebugType>embedded</DebugType>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<DockerfileContext>.</DockerfileContext>
+		<UserSecretsId>63fd196d-4357-4598-a192-2a322de96418</UserSecretsId>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

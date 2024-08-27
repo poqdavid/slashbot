@@ -50,7 +50,7 @@ internal class SlashBotHostedService(ILogger<SlashBotHostedService> logger, Disc
 
         await _discordClient.ConnectAsync();
 
-        await Task.Delay(-1);
+        await Task.Delay(-1, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
