@@ -4,7 +4,6 @@
 ### Docker support
 
 ```docker
-version: '3.4'
 
 services:
   slashbot:
@@ -13,7 +12,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     environment: 
-      - Discord_Token=<token>
-      - Discord_DefaultActivity=Commands...
-      = Discord_DefaultActivityType=ListeningTo
+      - Discord:Token=<token>
+      - Discord:DefaultActivity=Commands...
+      = Discord:DefaultActivityType=ListeningTo
 ```
