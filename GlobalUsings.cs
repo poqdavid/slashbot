@@ -1,6 +1,6 @@
 ﻿/*
  *      This file is part of SlashBot distribution (https://github.com/sysvdev/slashbot).
- *      Copyright (c) 2023 contributors
+ *      Copyright (c) 2024 contributors
  *
  *      SlashBot is free software: you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ global using DSharpPlus.Commands.Processors;
 global using DSharpPlus.Commands.Processors.SlashCommands;
 global using DSharpPlus.Entities;
 global using DSharpPlus.EventArgs;
+global using DSharpPlus.Exceptions;
 global using DSharpPlus.Extensions;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,7 @@ global using Microsoft.Extensions.Logging;
 global using Serilog;
 global using SlashBot.Commands;
 global using SlashBot.Datas;
+global using SlashBot.EventHandlers;
 global using SlashBot.Utils;
 global using System;
 global using System.ComponentModel;

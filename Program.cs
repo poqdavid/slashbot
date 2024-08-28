@@ -43,9 +43,15 @@ internal class Program
 
     private static async Task Main(string[] args)
     {
+        var program = new Program();
+
+        Thread.CurrentThread.Name = "MainThread";
+
         var cts = new CancellationTokenSource();
 
         var host = Host.CreateDefaultBuilder(args)
+         .UseSerilog()
+         .UseConsoleLifetime()
          .ConfigureAppConfiguration((context, config) =>
          {
              config.SetBasePath(Directory.GetCurrentDirectory());
@@ -57,24 +63,49 @@ internal class Program
          .ConfigureServices((context, services) =>
          {
              var configuration = context.Configuration;
-             //services.AddSingleton<CommandsExtension>();
-             services.AddDiscordClient(configuration["discord:token"] ?? "<token>", DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents);
+             services.AddLogging(logging =>
+             {
+                 logging.ClearProviders().AddSerilog();
+                 Log.Logger = new LoggerConfiguration()
+                     .ReadFrom.Configuration(configuration)
+                     .CreateLogger();
+             });
+
+             services.AddSingleton<IClientErrorHandler, ErrorHandler>();
+             services.AddDiscordClient(configuration["discord:token"] ?? "<token>", DiscordIntents.AllUnprivileged | DiscordIntents.MessageContents).ConfigureEventHandlers(b =>
+             {
+                 b.HandleGuildAvailable(program.OnGuildAvailable)
+                 .HandleGuildDownloadCompleted(program.OnGuildDownloadCompleted)
+                 .HandleGuildCreated(program.OnGuildCreated)
+                 .HandleSessionCreated(program.OnSessionCreated);
+             });
+
+             var StrDebugGuildId = configuration["discord:debugguildid"] ?? "0";
+             services.AddCommandsExtension(extension =>
+             {
+                 // Add all commands by scanning the current assembly
+                 extension.AddCommands(typeof(BotCommands));
+
+                 List<ICommandProcessor> processors = [];
+                 SlashCommandProcessor slashCommandProcessor = new();
+                 slashCommandProcessor.AddConverters(typeof(BotCommands).Assembly);
+                 processors.Add(slashCommandProcessor);
+
+                 extension.AddProcessors(processors);
+             },
+             new CommandsConfiguration()
+             {
+                 DebugGuildId = ulong.Parse(StrDebugGuildId),
+                 UseDefaultCommandErrorHandler = false,
+                 RegisterDefaultCommandProcessors = false
+             });
+
              services.AddSingleton<SlashBotHostedService>();
              services.AddHostedService(s => s.GetRequiredService<SlashBotHostedService>());
-             //services.AddHostedService<SlashBotHostedService>();
-         })
-         .ConfigureLogging(logging =>
-         {
-             logging.ClearProviders();
-             logging.AddSerilog();
          })
          .Build();
 
         var configuration = host.Services.GetRequiredService<IConfiguration>();
-
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(configuration)
-            .CreateLogger();
 
         try
         {
@@ -83,12 +114,11 @@ internal class Program
         catch (Exception ex) { Log.Logger.Error(ex, "Error loading {SettingPath}", SettingPath); }
         finally { Log.Logger.Information("Settings loaded"); }
 
-        Config.Discord.Token = Environment.GetEnvironmentVariable("Discord_Token") ?? Config.Discord.Token;
         Config.Discord.Token = configuration["discord:token"] ?? Config.Discord.Token;
 
-        Config.Discord.DefaultActivity = Environment.GetEnvironmentVariable("Discord_DefaultActivity") ?? Config.Discord.DefaultActivity;
+        Config.Discord.DefaultActivity = configuration["discord:defaultactivity"] ?? Config.Discord.DefaultActivity;
 
-        if (Enum.TryParse<DiscordActivityType>(Environment.GetEnvironmentVariable("Discord_DefaultActivityType"), out DiscordActivityType at))
+        if (Enum.TryParse<DiscordActivityType>(configuration["discord:defaultactivitytype"], out DiscordActivityType at))
         {
             Config.Discord.DefaultActivityType = at;
         }
@@ -115,5 +145,37 @@ internal class Program
         {
             await Log.CloseAndFlushAsync();
         }
+    }
+
+    private async Task OnSessionCreated(DiscordClient sender, SessionCreatedEventArgs e)
+    {
+        sender.Logger.LogInformation(Program.BotEventId, "Client is ready to process events.");
+
+        await sender.UpdateStatusAsync(new DiscordActivity()
+        {
+            ActivityType = Program.Config.Discord.DefaultActivityType,
+            Name = Program.Config.Discord.DefaultActivity
+        }, DiscordUserStatus.Online);
+    }
+
+    private Task OnGuildAvailable(DiscordClient sender, GuildAvailableEventArgs e)
+    {
+        sender.Logger.LogInformation(Program.BotEventId, "Guild available: {GuildName}", e.Guild.Name);
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnGuildDownloadCompleted(DiscordClient sender, GuildDownloadCompletedEventArgs e)
+    {
+        sender.Logger.LogInformation(Program.BotEventId, "Guild download completed: {GuildName}", e.Guilds.Values);
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnGuildCreated(DiscordClient sender, GuildCreatedEventArgs e)
+    {
+        sender.Logger.LogInformation(Program.BotEventId, "Guild joined: {GuildName}", e.Guild.Name);
+
+        return Task.CompletedTask;
     }
 }

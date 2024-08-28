@@ -1,6 +1,6 @@
 /*
  *      This file is part of SlashBot distribution (https://github.com/sysvdev/slashbot).
- *      Copyright (c) 2023 contributors
+ *      Copyright (c) 2024 contributors
  *
  *      SlashBot is free software: you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
@@ -40,23 +40,39 @@ public class Settings
     }
 
     /// <summary>
+    /// Defines JsonSerializerOptions for writing JSON data.
+    /// </summary>
+    private static readonly JsonSerializerOptions json_writeOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    /// <summary>
+    /// Defines JsonSerializerOptions for reading JSON data.
+    /// </summary>
+    private static readonly JsonSerializerOptions json_readOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    /// <summary>
     /// Saves the App settings in selected path.
     /// </summary>
+#pragma warning disable CA1822 // Mark members as static
+
     public void SaveSetting()
+#pragma warning restore CA1822 // Mark members as static
     {
         if (!Directory.Exists(Program.CurrentDir))
         {
             _ = Directory.CreateDirectory(Program.CurrentDir);
         }
 
-        JsonSerializerOptions options = new()
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            WriteIndented = true,
-            Converters = { new JsonStringEnumConverter() }
-        };
-
-        File.WriteAllText(Program.SettingPath, JsonSerializer.Serialize(Program.Config, options));
+        File.WriteAllText(Program.SettingPath, JsonSerializer.Serialize(Program.Config, json_writeOptions));
     }
 
     /// <summary>
@@ -69,14 +85,7 @@ public class Settings
             string json_string = File.ReadAllText(Program.SettingPath);
             if (Json.IsValid(json_string))
             {
-                JsonSerializerOptions options = new()
-                {
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                    WriteIndented = true,
-                    Converters = { new JsonStringEnumConverter() }
-                };
-
-                Program.Config = JsonSerializer.Deserialize<Settings>(json_string, options);
+                Program.Config = JsonSerializer.Deserialize<Settings>(json_string, json_readOptions);
             }
             else
             {

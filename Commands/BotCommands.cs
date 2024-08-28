@@ -1,6 +1,6 @@
 ﻿/*
  *      This file is part of SlashBot distribution (https://github.com/sysvdev/slashbot).
- *      Copyright (c) 2023 contributors
+ *      Copyright (c) 2024 contributors
  *
  *      SlashBot is free software: you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
@@ -23,26 +23,36 @@ public class BotCommands
     [Command("table_flip"), Description("Post a table flip")]
     [RequireGuild()]
     [RequirePermissions(DiscordPermissions.SendMessages)]
-    public static async Task TableFlip(CommandContext ctx)
+    public static async Task TableFlip(CommandContext context)
     {
         try
         {
             string flip = Program.TableFlips[new Random().Next(Program.TableFlips.Length)];
-            await ctx.RespondAsync(new DiscordInteractionResponseBuilder().WithContent(flip));
+            await context.RespondAsync(new DiscordInteractionResponseBuilder().WithContent(flip));
         }
         catch (Exception ex)
         {
-            await ctx.RespondAsync(new DiscordInteractionResponseBuilder().WithContent($"An exception occured: `{ex.GetType()}: {ex.Message}`"));
+            await context.RespondAsync(new DiscordInteractionResponseBuilder().WithContent($"An exception occured: `{ex.GetType()}: {ex.Message}`"));
         }
     }
 
     [Command("ping")]
     [Description("Replies with Pong and Discord Websocket latency for Client to your ping")]
-    public static async Task Ping(CommandContext context) => await context.RespondAsync(new DiscordInteractionResponseBuilder()
+    public static async Task Ping(CommandContext context)
     {
-        Content = $"Pong! Discord Websocket latency for Client is {context.Client.Ping}ms.",
-        IsEphemeral = true
-    });
+        if (context.Guild is not null)
+        {
+            await context.RespondAsync(new DiscordInteractionResponseBuilder()
+            {
+                Content = $"Pong! Discord Websocket latency for Client is {context.Client.GetConnectionLatency(context.Guild.Id).Milliseconds}ms.",
+                IsEphemeral = true
+            });
+        }
+        else
+        {
+            await context.RespondAsync(new DiscordInteractionResponseBuilder().WithContent($"Guild ID Null."));
+        }
+    }
 
     [Command("test")]
     [Description("Testing 1234")]
